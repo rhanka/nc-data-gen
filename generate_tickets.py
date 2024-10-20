@@ -7,160 +7,160 @@ import dotenv
 from openai import OpenAI
 import ssl
 
-#source env
+# Load environment variables
 dotenv.load_dotenv()
 OpenAI.api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI()
 
-# Définir les catégories d'incidents et les label possibles
+# Define incident categories and possible labels
 categories = {
     "MEC": {
-        "category": "Non-conformités Mécaniques",
+        "category": "Mechanical Non-Conformities",
         "label": [
-            "Défaut d'alignement détecté lors de l'assemblage",
-            "Couple de serrage incorrect sur le moteur",
-            "Pièce endommagée constatée pendant le contrôle",
-            "Usure prématurée d'un composant mécanique",
-            "Fuite hydraulique détectée dans le système",
-            "Vibration excessive observée lors des tests",
-            "Corrosion prématurée sur une pièce métallique",
-            "Déformation structurelle identifiée",
-            "Problème d'équilibrage sur une pièce rotative",
-            "Surchauffe d'un composant mécanique"
+            "Alignment defect detected during assembly",
+            "Incorrect torque on the engine",
+            "Damaged part identified during inspection",
+            "Premature wear of a mechanical component",
+            "Hydraulic leak detected in the system",
+            "Excessive vibration observed during testing",
+            "Premature corrosion on a metal part",
+            "Structural deformation identified",
+            "Balancing problem on a rotating part",
+            "Overheating of a mechanical component"
         ],
-        "ticket_status": ["Ouvert", "En cours d'analyse", "Correction en cours", "En validation", "Fermé"],
-        "weight": 0.25  # 25% du total des tickets
+        "ticket_status": ["Open", "Under Analysis", "Correction In Progress", "Under Validation", "Closed"],
+        "weight": 0.25  # 25% of total tickets
     },
     "ELE": {
-        "category": "Non-conformités Électriques",
+        "category": "Electrical Non-Conformities",
         "label": [
-            "Erreur de câblage dans le système de navigation",
-            "Connecteur défectueux entraînant une perte de signal",
-            "Court-circuit détecté lors des tests électriques",
-            "Batterie défaillante nécessitant un remplacement",
-            "Acategoryalie dans le système d'alimentation électrique",
-            "Interférence électromagnétique observée",
-            "Problème de mise à la terre sur un composant",
-            "Fusible grillé lors de l'activation du système",
-            "Survoltage détecté dans le circuit principal",
-            "Défaut d'isolation sur un câble électrique"
+            "Wiring error in the navigation system",
+            "Defective connector causing signal loss",
+            "Short circuit detected during electrical tests",
+            "Faulty battery requiring replacement",
+            "Anomaly in the power supply system",
+            "Electromagnetic interference observed",
+            "Grounding problem on a component",
+            "Blown fuse during system activation",
+            "Overvoltage detected in the main circuit",
+            "Insulation defect on an electrical cable"
         ],
-        "ticket_status": ["Ouvert", "En cours d'analyse", "Correction en cours", "En validation", "Fermé"],
-        "weight": 0.20  # 20% du total des tickets
+        "ticket_status": ["Open", "Under Analysis", "Correction In Progress", "Under Validation", "Closed"],
+        "weight": 0.20  # 20% of total tickets
     },
     "LOG": {
-        "category": "Non-conformités Logicielles",
+        "category": "Software Non-Conformities",
         "label": [
-            "Bug critique dans le logiciel de pilotage automatique",
-            "Incompatibilité entre les versions du firmware",
-            "Erreur de configuration du système embarqué",
-            "Temps de réponse anormalement long du système",
-            "Crash du système lors de l'exécution de certaines commandes",
-            "Mémoire insuffisante provoquant des ralentissements",
-            "Erreur dans les calculs de navigation",
-            "Problème de sécurité dans le logiciel embarqué",
-            "Mise à jour échouée du logiciel système",
-            "Fonctionnalité manquante dans le module de communication"
+            "Critical bug in the autopilot software",
+            "Incompatibility between firmware versions",
+            "Configuration error in the embedded system",
+            "Abnormally long system response time",
+            "System crash during execution of certain commands",
+            "Insufficient memory causing slowdowns",
+            "Error in navigation calculations",
+            "Security issue in the embedded software",
+            "Failed software update",
+            "Missing functionality in the communication module"
         ],
-        "ticket_status": ["Ouvert", "Analyse par l'ingénieur logiciel", "Développement en cours", "Tests de validation", "Fermé"],
-        "weight": 0.15  # 15% du total des tickets
+        "ticket_status": ["Open", "Software Engineer Analysis", "Development In Progress", "Validation Testing", "Closed"],
+        "weight": 0.15  # 15% of total tickets
     },
     "DOC": {
-        "category": "Non-conformités Documentaires",
+        "category": "Documentation Non-Conformities",
         "label": [
-            "Manuel d'utilisation manquant pour un équipement",
-            "Procédure obsolète détectée dans la documentation",
-            "Erreur d'étiquetage sur les composants",
-            "Incohérence entre le schéma et la description textuelle",
-            "Page manquante dans le rapport technique",
-            "Mauvaise traduction dans la documentation fournie",
-            "Référence incorrecte à une norme industrielle",
-            "Table des matières incomplète ou erronée",
-            "Illustrations manquantes pour certaines procédures",
-            "Instructions de sécurité absentes du manuel"
+            "Missing user manual for a piece of equipment",
+            "Obsolete procedure detected in the documentation",
+            "Labeling error on components",
+            "Inconsistency between diagram and text description",
+            "Missing page in the technical report",
+            "Poor translation in the provided documentation",
+            "Incorrect reference to an industry standard",
+            "Incomplete or erroneous table of contents",
+            "Missing illustrations for some procedures",
+            "Missing safety instructions in the manual"
         ],
-        "ticket_status": ["Ouvert", "Vérification par le responsable documentation", "Mise à jour en cours", "Diffusion de la nouvelle version", "Fermé"],
-        "weight": 0.10  # 10% du total des tickets
+        "ticket_status": ["Open", "Document Officer Verification", "Update In Progress", "New Version Release", "Closed"],
+        "weight": 0.10  # 10% of total tickets
     },
     "QUAL": {
-        "category": "Non-conformités de Contrôle Qualité",
+        "category": "Quality Control Non-Conformities",
         "label": [
-            "Mesures incorrectes relevées lors du contrôle",
-            "Calibration erronée d'un instrument de mesure",
-            "Contrôle qualité manquant sur une série de pièces",
-            "Non-respect des tolérances spécifiées",
-            "Procédure de contrôle non appliquée correctement",
-            "Échantillonnage insuffisant pour les tests",
-            "Rapport de contrôle qualité incomplet",
-            "Non-conformité aux normes ISO détectée",
-            "Erreur humaine lors de l'inspection visuelle",
-            "Non-respect du plan de contrôle établi"
+            "Incorrect measurements taken during inspection",
+            "Incorrect calibration of a measuring instrument",
+            "Missing quality control on a batch of parts",
+            "Non-compliance with specified tolerances",
+            "Improper application of control procedure",
+            "Insufficient sampling for tests",
+            "Incomplete quality control report",
+            "ISO standard non-compliance detected",
+            "Human error during visual inspection",
+            "Non-compliance with the established control plan"
         ],
-        "ticket_status": ["Ouvert", "Analyse par l'ingénieur qualité", "Action corrective en cours", "Suivi et vérification", "Fermé"],
-        "weight": 0.15  # 15% du total des tickets
+        "ticket_status": ["Open", "Quality Engineer Analysis", "Corrective Action In Progress", "Follow-up and Verification", "Closed"],
+        "weight": 0.15  # 15% of total tickets
     },
     "SUP": {
-        "category": "Non-conformités de Chaîne d'Approvisionnement",
+        "category": "Supply Chain Non-Conformities",
         "label": [
-            "Livraison tardive de composants critiques",
-            "Réception de pièces non conformes aux spécifications",
-            "Composants contrefaits détectés dans le lot",
-            "Erreur dans la quantité de pièces livrées",
-            "Documentation du fournisseur incomplète",
-            "Changement de fournisseur sans notification",
-            "Problèmes de qualité récurrents avec un fournisseur",
-            "Non-respect des conditions d'emballage",
-            "Étiquetage incorrect sur les lots reçus",
-            "Non-conformité aux réglementations d'importation"
+            "Late delivery of critical components",
+            "Receipt of parts not meeting specifications",
+            "Counterfeit components detected in the batch",
+            "Error in the quantity of parts delivered",
+            "Incomplete supplier documentation",
+            "Supplier change without notification",
+            "Recurrent quality issues with a supplier",
+            "Non-compliance with packaging conditions",
+            "Incorrect labeling on received batches",
+            "Non-compliance with import regulations"
         ],
-        "ticket_status": ["Ouvert", "Analyse par l'acheteur", "Communication avec le fournisseur", "Action corrective du fournisseur", "Fermé"],
-        "weight": 0.10  # 10% du total des tickets
+        "ticket_status": ["Open", "Buyer Analysis", "Supplier Communication", "Supplier Corrective Action", "Closed"],
+        "weight": 0.10  # 10% of total tickets
     },
     "SEC": {
-        "category": "Non-conformités de Sécurité",
+        "category": "Safety Non-Conformities",
         "label": [
-            "Équipement de protection individuelle manquant",
-            "Danger non résolu signalé sur le site",
-            "Procédure de sécurité non respectée par le personnel",
-            "Zone de travail non conforme aux normes de sécurité",
-            "Incident de sécurité sans blessure signalé",
-            "Signalisation de sécurité absente ou insuffisante",
-            "Formation à la sécurité non suivie par un employé",
-            "Matériel de premiers secours non disponible",
-            "Exercice d'évacuation non réalisé dans les délais",
-            "Utilisation inappropriée d'équipements dangereux"
+            "Missing personal protective equipment",
+            "Unresolved hazard reported on site",
+            "Safety procedure not followed by personnel",
+            "Work area not meeting safety standards",
+            "Safety incident reported without injury",
+            "Insufficient or missing safety signage",
+            "Safety training not completed by an employee",
+            "First aid equipment not available",
+            "Evacuation drill not conducted on time",
+            "Improper use of hazardous equipment"
         ],
-        "ticket_status": ["Ouvert", "Analyse par le responsable sécurité", "Action immédiate en cours", "Mise en place de mesures préventives", "Fermé"],
-        "weight": 0.05  # 5% du total des tickets
+        "ticket_status": ["Open", "Safety Officer Analysis", "Immediate Action In Progress", "Preventive Measures Implementation", "Closed"],
+        "weight": 0.05  # 5% of total tickets
     }
 }
 
 def generate_comment(ticket_id, status, category_name):
-    # Génère un commentaire en utilisant des templates
-    commentaires_templates = {
-        "Ouvert": f"Le ticket {ticket_id} a été ouvert suite à une non-conformité détectée",
-        "En cours d'analyse": f"L'équipe analyse actuellement le ticket {ticket_id}",
-        "Correction en cours": f"Des mesures correctives sont en cours pour le ticket {ticket_id}",
-        "En validation": f"Le ticket {ticket_id} est en phase de validation",
-        "Fermé": f"Le ticket {ticket_id} a été résolu et fermé",
-        "Analyse par l'ingénieur logiciel": f"L'ingénieur logiciel examine le ticket {ticket_id}",
-        "Développement en cours": f"Les corrections logicielles sont en cours pour le ticket {ticket_id}",
-        "Tests de validation": f"Les tests de validation sont en cours pour le ticket {ticket_id}",
-        "Vérification par le responsable documentation": f"Le responsable documentation vérifie le ticket {ticket_id}",
-        "Mise à jour en cours": f"La documentation est en cours de mise à jour pour le ticket {ticket_id}",
-        "Diffusion de la nouvelle version": f"La nouvelle documentation pour le ticket {ticket_id} a été diffusée",
-        "Analyse par l'ingénieur qualité": f"L'ingénieur qualité analyse le ticket {ticket_id}",
-        "Action corrective en cours": f"Des actions correctives sont mises en place pour le ticket {ticket_id}",
-        "Suivi et vérification": f"Un suivi est en cours pour le ticket {ticket_id}",
-        "Analyse par l'acheteur": f"L'acheteur analyse le ticket {ticket_id}",
-        "Communication avec le fournisseur": f"Le fournisseur a été contacté concernant le ticket {ticket_id}",
-        "Action corrective du fournisseur": f"Le fournisseur met en place des actions pour le ticket {ticket_id}",
-        "Analyse par le responsable sécurité": f"Le responsable sécurité examine le ticket {ticket_id}",
-        "Action immédiate en cours": f"Des mesures immédiates sont prises pour le ticket {ticket_id}",
-        "Mise en place de mesures préventives": f"Des mesures préventives sont instaurées pour le ticket {ticket_id}"
+    # Generate a comment using templates
+    comment_templates = {
+        "Open": f"Ticket {ticket_id} was opened following a detected non-conformity",
+        "Under Analysis": f"The team is currently analyzing ticket {ticket_id}",
+        "Correction In Progress": f"Corrective measures are in progress for ticket {ticket_id}",
+        "Under Validation": f"Ticket {ticket_id} is in the validation phase",
+        "Closed": f"Ticket {ticket_id} has been resolved and closed",
+        "Software Engineer Analysis": f"The software engineer is examining ticket {ticket_id}",
+        "Development In Progress": f"Software corrections are in progress for ticket {ticket_id}",
+        "Validation Testing": f"Validation tests are in progress for ticket {ticket_id}",
+        "Document Officer Verification": f"The document officer is verifying ticket {ticket_id}",
+        "Update In Progress": f"Documentation is being updated for ticket {ticket_id}",
+        "New Version Release": f"The new documentation for ticket {ticket_id} has been released",
+        "Quality Engineer Analysis": f"The quality engineer is analyzing ticket {ticket_id}",
+        "Corrective Action In Progress": f"Corrective actions are being implemented for ticket {ticket_id}",
+        "Follow-up and Verification": f"Follow-up is in progress for ticket {ticket_id}",
+        "Buyer Analysis": f"The buyer is analyzing ticket {ticket_id}",
+        "Supplier Communication": f"The supplier has been contacted regarding ticket {ticket_id}",
+        "Supplier Corrective Action": f"The supplier is implementing actions for ticket {ticket_id}",
+        "Safety Officer Analysis": f"The safety officer is examining ticket {ticket_id}",
+        "Immediate Action In Progress": f"Immediate measures are being taken for ticket {ticket_id}",
+        "Preventive Measures Implementation": f"Preventive measures are being implemented for ticket {ticket_id}"
     }
-    comment = commentaires_templates.get(status, f"Statut {status} pour le ticket {ticket_id}")
+    comment = comment_templates.get(status, f"Status {status} for ticket {ticket_id}")
     return comment
 
 def generate_ticket_dates(num_tickets, start_date, end_date):
@@ -174,12 +174,12 @@ def generate_ticket_dates(num_tickets, start_date, end_date):
 
 def generate_description(category_name, description_hint):
     prompt = (
-        f"Vous êtes un expert en gestion de non-conformités dans le domaine {category_name}. "
-        f"Veuillez générer une description détaillée et réaliste pour une non-conformité. "
-        f"Voici un exemple de description : {description_hint}. "
-        f"Assurez-vous que la description est pertinente et réaliste"
+        f"You are an expert in non-conformity management in the {category_name} domain. "
+        f"Please generate a detailed and realistic description for a non-conformity. "
+        f"Here is an example of a description: {description_hint}. "
+        f"Ensure that the description is relevant and realistic."
     )
-    max_tokens = random.randint(30, 100)  # Longueur variable pour la description
+    max_tokens = random.randint(30, 100)  # Variable length for description
     response = client.chat.completions.create(
         messages=[{
             "role": "user",
@@ -194,9 +194,7 @@ def generate_tickets(category_code, category_info, ticket_dates):
     tickets = []
     for i, date_opened in enumerate(ticket_dates):
         ticket_id = f"NC-{category_code}-{i+1:05d}"
-        # Sélectionner une description d'exemple aléatoire pour le prompt
         description_hint = random.choice(category_info['label'])
-        # Utiliser l'IA pour générer une description
         description = generate_description(category_info['category'], description_hint)
         status_history = []
         current_date = date_opened
@@ -205,58 +203,55 @@ def generate_tickets(category_code, category_info, ticket_dates):
         for status in statuses:
             comment = generate_comment(ticket_id, status, category_name)
             status_entry = {
-                "Statut": status,
+                "Status": status,
                 "Date": current_date.strftime("%Y-%m-%d"),
-                "Commentaire": comment
+                "Comment": comment
             }
             status_history.append(status_entry)
-            # Délais aléatoires entre les statuts, ajustés selon la catégorie
             if category_code == "LOG":
-                delta_days = random.randint(3, 7)  # Délais plus longs pour le logiciel
+                delta_days = random.randint(3, 7)  # Longer delays for software
             elif category_code == "SEC":
-                delta_days = random.randint(1, 2)  # Délais plus courts pour la sécurité
+                delta_days = random.randint(1, 2)  # Shorter delays for safety
             else:
                 delta_days = random.randint(1, 5)
             current_date += timedelta(days=delta_days)
         ticket = {
             "Ticket ID": ticket_id,
-            "Catégorie": category_name,
-            "Date d'ouverture": date_opened.strftime("%Y-%m-%d"),
-            "Description Initiale": description,
-            "Historique des Statuts": status_history
+            "Category": category_name,
+            "Open Date": date_opened.strftime("%Y-%m-%d"),
+            "Initial Description": description,
+            "Status History": status_history
         }
         tickets.append(ticket)
-        # Affichage de la progression
-        if (i + 1) % 10 == 0:  # Affiche tous les 100 tickets
-            print(f"{i + 1}/{len(tickets)} tickets générés pour la catégorie {category_info['category']}")
+        if (i + 1) % 10 == 0:
+            print(f"{i + 1}/{len(tickets)} tickets generated for category {category_info['category']}")
     return tickets
 
 def save_tickets_to_csv(tickets, filename):
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Ticket ID', 'Catégorie', 'Date d\'ouverture', 'Description Initiale', 'Statut', 'Date Statut', 'Commentaire']
+        fieldnames = ['Ticket ID', 'Category', 'Open Date', 'Initial Description', 'Status', 'Status Date', 'Comment']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for ticket in tickets:
-            for status in ticket['Historique des Statuts']:
+            for status in ticket['Status History']:
                 writer.writerow({
                     'Ticket ID': ticket['Ticket ID'],
-                    'Catégorie': ticket['Catégorie'],
-                    "Date d'ouverture": ticket["Date d'ouverture"],  # Correction ici
-                    'Description Initiale': ticket['Description Initiale'],
-                    'Statut': status['Statut'],
-                    'Date Statut': status['Date'],
-                    'Commentaire': status['Commentaire']
+                    'Category': ticket['Category'],
+                    "Open Date": ticket["Open Date"],
+                    'Initial Description': ticket['Initial Description'],
+                    'Status': status['Status'],
+                    'Status Date': status['Date'],
+                    'Comment': status['Comment']
                 })
 
 def main():
     start_date = datetime(2020, 1, 1)
     end_date = datetime(2024, 10, 31)
-    total_tickets = 50  # categorybre total de tickets à générer
+    total_tickets = 50  # total number of tickets to generate
     all_tickets = []
-    # Calculer le categorybre de tickets par catégorie
     for category_code, category_info in categories.items():
         num_tickets = int(total_tickets * category_info["weight"])
-        print(f"Génération de {num_tickets} tickets pour la catégorie {category_info['category']}...")
+        print(f"Generating {num_tickets} tickets for category {category_info['category']}...")
         ticket_dates = generate_ticket_dates(num_tickets, start_date, end_date)
         tickets = generate_tickets(
             category_code=category_code,
@@ -264,12 +259,10 @@ def main():
             ticket_dates=ticket_dates
         )
         all_tickets.extend(tickets)
-    # Enregistrer les tickets dans un fichier JSON
-    with open('non_conformites.json', 'w', encoding='utf-8') as f:
+    with open('non_conformities.json', 'w', encoding='utf-8') as f:
         json.dump(all_tickets, f, ensure_ascii=False, indent=4)
-    # Enregistrer les tickets dans un fichier CSV
-    save_tickets_to_csv(all_tickets, 'non_conformites.csv')
-    print("Génération terminée. Les données sont enregistrées dans 'non_conformites.json' et 'non_conformites.csv'")
+    save_tickets_to_csv(all_tickets, 'non_conformities.csv')
+    print("Generation complete. Data saved to 'non_conformities.json' and 'non_conformities.csv'")
 
 if __name__ == "__main__":
     main()
