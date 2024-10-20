@@ -5,7 +5,6 @@ import csv
 import os
 import dotenv
 from openai import OpenAI
-import ssl
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -29,7 +28,6 @@ categories = {
             "Balancing problem on a rotating part",
             "Overheating of a mechanical component"
         ],
-        "ticket_status": ["Open", "Under Analysis", "Correction In Progress", "Under Validation", "Closed"],
         "weight": 0.25  # 25% of total tickets
     },
     "ELE": {
@@ -46,7 +44,6 @@ categories = {
             "Overvoltage detected in the main circuit",
             "Insulation defect on an electrical cable"
         ],
-        "ticket_status": ["Open", "Under Analysis", "Correction In Progress", "Under Validation", "Closed"],
         "weight": 0.20  # 20% of total tickets
     },
     "LOG": {
@@ -63,7 +60,6 @@ categories = {
             "Failed software update",
             "Missing functionality in the communication module"
         ],
-        "ticket_status": ["Open", "Software Engineer Analysis", "Development In Progress", "Validation Testing", "Closed"],
         "weight": 0.15  # 15% of total tickets
     },
     "DOC": {
@@ -80,7 +76,6 @@ categories = {
             "Missing illustrations for some procedures",
             "Missing safety instructions in the manual"
         ],
-        "ticket_status": ["Open", "Document Officer Verification", "Update In Progress", "New Version Release", "Closed"],
         "weight": 0.10  # 10% of total tickets
     },
     "QUAL": {
@@ -97,7 +92,6 @@ categories = {
             "Human error during visual inspection",
             "Non-compliance with the established control plan"
         ],
-        "ticket_status": ["Open", "Quality Engineer Analysis", "Corrective Action In Progress", "Follow-up and Verification", "Closed"],
         "weight": 0.15  # 15% of total tickets
     },
     "SUP": {
@@ -114,7 +108,6 @@ categories = {
             "Incorrect labeling on received batches",
             "Non-compliance with import regulations"
         ],
-        "ticket_status": ["Open", "Buyer Analysis", "Supplier Communication", "Supplier Corrective Action", "Closed"],
         "weight": 0.10  # 10% of total tickets
     },
     "SEC": {
@@ -131,37 +124,229 @@ categories = {
             "Evacuation drill not conducted on time",
             "Improper use of hazardous equipment"
         ],
-        "ticket_status": ["Open", "Safety Officer Analysis", "Immediate Action In Progress", "Preventive Measures Implementation", "Closed"],
         "weight": 0.05  # 5% of total tickets
     }
 }
 
-def generate_comment(ticket_id, status, category_name):
-    # Generate a comment using templates
-    comment_templates = {
-        "Open": f"Ticket {ticket_id} was opened following a detected non-conformity",
-        "Under Analysis": f"The team is currently analyzing ticket {ticket_id}",
-        "Correction In Progress": f"Corrective measures are in progress for ticket {ticket_id}",
-        "Under Validation": f"Ticket {ticket_id} is in the validation phase",
-        "Closed": f"Ticket {ticket_id} has been resolved and closed",
-        "Software Engineer Analysis": f"The software engineer is examining ticket {ticket_id}",
-        "Development In Progress": f"Software corrections are in progress for ticket {ticket_id}",
-        "Validation Testing": f"Validation tests are in progress for ticket {ticket_id}",
-        "Document Officer Verification": f"The document officer is verifying ticket {ticket_id}",
-        "Update In Progress": f"Documentation is being updated for ticket {ticket_id}",
-        "New Version Release": f"The new documentation for ticket {ticket_id} has been released",
-        "Quality Engineer Analysis": f"The quality engineer is analyzing ticket {ticket_id}",
-        "Corrective Action In Progress": f"Corrective actions are being implemented for ticket {ticket_id}",
-        "Follow-up and Verification": f"Follow-up is in progress for ticket {ticket_id}",
-        "Buyer Analysis": f"The buyer is analyzing ticket {ticket_id}",
-        "Supplier Communication": f"The supplier has been contacted regarding ticket {ticket_id}",
-        "Supplier Corrective Action": f"The supplier is implementing actions for ticket {ticket_id}",
-        "Safety Officer Analysis": f"The safety officer is examining ticket {ticket_id}",
-        "Immediate Action In Progress": f"Immediate measures are being taken for ticket {ticket_id}",
-        "Preventive Measures Implementation": f"Preventive measures are being implemented for ticket {ticket_id}"
+# Define the ticket status steps & prompts with enhanced instructions for realism
+ticket_status_steps_prompts = [
+    {
+        "status": "Open",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": (
+            "As the technician involved in the A220 aircraft manufacturing process who opened the ticket, "
+            "provide a detailed and realistic description of the non-conformity. "
+            "Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician."
+        )
+    },
+    {
+        "status": "Technical Analysis",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": (
+            "As a technical analyst in the A220 aircraft manufacturing process, analyze the issue described. "
+            "Provide insights based on previous comments and the ticket description, using professional language appropriate for an engineer. "
+            "Include possible causes, affected systems, and any immediate recommendations."
+        )
+    },
+    {
+        "status": "Technical Analysis - expertise",
+        "type": "optional",
+        "recurrence": "many",
+        "prompt": (
+            "As an expert in the A220 aircraft manufacturing domain, offer specialized input on the issue. "
+            "Expand on the analysis and previous comments with advanced technical insights, maintaining a professional tone."
+        )
+    },
+    {
+        "status": "Technical Analysis - validation",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": (
+            "As the technical manager overseeing the A220 aircraft manufacturing, validate the analysis provided. "
+            "Offer feedback or approval, addressing any concerns in a professional manner appropriate for management."
+        )
+    },
+    {
+        "status": "Calculation Analysis",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "As a calculation engineer specialist, perform calculation analysis related to the issue and document your findings."
+    },
+    {
+        "status": "Calculation Analysis - expertise",
+        "type": "optional",
+        "recurrence": "many",
+        "prompt": "As a calculation engineer expert in the domain, contribute specialized calculations or validations as needed."
+    },
+    {
+        "status": "Calculation Analysis - validation",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "As the calculation engineer manager, validate the calculation analysis and provide approval or request further action."
+    },
+    {
+        "status": "Analysis & Calculation - workpackage validation",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "As the work package responsible, review all analyses and provide your signature with any additional comments."
+    },
+    {
+        "status": "Root-cause analysis",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "Conduct a root-cause analysis to determine the underlying issue and document your findings."
+    },
+    {
+        "status": "Classification: Impact assessment (minor, major, critical)",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "Assess the impact of the non-conformity and classify it as minor, major, or critical."
+    },
+    {
+        "status": "Decision of corrective actions required",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "Decide on the necessary corrective actions and document the decisions made."
+    },
+    {
+        "status": "Correction Action Plan Definition",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": "Define a corrective action plan detailing the steps required to resolve the issue."
+    },
+    {
+        "status": "Correction Action Plan Execution - per action",
+        "type": "mandatory",
+        "recurrence": "many",
+        "prompt": "Execute the corrective action plan and document progress and any challenges faced."
+    },
+    {
+        "status": "Validation of corrective actions",
+        "type": "mandatory",
+        "recurrence": "many",
+        "prompt": "Validate that the corrective actions have resolved the issue and document your approval."
+    },
+    {
+        "status": "Closure",
+        "type": "mandatory",
+        "recurrence": "once",
+        "prompt": (
+            "As the final reviewer, confirm that all steps have been completed satisfactorily and close the ticket. "
+            "Provide a summary of the resolution, ensuring all documentation is complete, and maintain a professional tone."
+        )
     }
-    comment = comment_templates.get(status, f"Status {status} for ticket {ticket_id}")
-    return comment
+]
+
+def generate_comment(ticket_id, status_info, category_name, description, previous_comments):
+    status = status_info["status"]
+    prompt_injection = status_info["prompt"]
+
+    # Decide on a word limit for the comment
+    word_limit = random.randint(50, 500)
+
+    # Generate a comment using OpenAI API based on the description and previous comments
+    full_prompt = (
+        f"Role: {prompt_injection}\n"
+        f"Ticket ID: {ticket_id}\n"
+        f"Category: {category_name}\n"
+        f"Status: {status}\n"
+        f"Ticket Description: {description}\n"
+        f"Previous Comments:\n"
+        f"{'-'*20}\n"
+        f"{chr(10).join(previous_comments)}\n"
+        f"{'-'*20}\n"
+        f"Please write your comment, using professional and technical language appropriate for your role. "
+        f"Ensure the response is realistic and aligns with the context provided. "
+        f"Limit your response to approximately {word_limit} words."
+    )
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": full_prompt,
+        }],
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+def generate_description(category_name, description_hint):
+    # Decide on a word limit for the description
+    word_limit = random.randint(50, 150)
+
+    # Generate a description using OpenAI API based on the category and hint
+    prompt = (
+        f"You are a technician working on the A220 aircraft manufacturing process in the {category_name} domain.\n"
+        f"Based on the hint '{description_hint}', provide a detailed and realistic description of a non-conformity event. "
+        f"Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician.\n"
+        f"Please limit your response to approximately {word_limit} words."
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": prompt,
+        }],
+        temperature=0.7
+    )
+    return response.choices[0].message.content.strip()
+
+def determine_complexity(description, first_technical_analysis):
+    prompt = (
+        f"Based on the following non-conformity description and technical analysis, "
+        f"determine the complexity level of the issue on a scale from 1 (low) to 3 (high). "
+        "Provide only the complexity level as a number (1, 2, or 3), and no additional text.\n\n"
+        f"Description: {description}\n"
+        f"Technical Analysis: {first_technical_analysis}"
+    )
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": prompt,
+        }],
+        max_tokens=1,
+        temperature=0
+    )
+    complexity_str = response.choices[0].message.content.strip()
+    try:
+        complexity = int(complexity_str)
+        if complexity in [1, 2, 3]:
+            return complexity
+        else:
+            return random.randint(1, 3)
+    except ValueError:
+        return random.randint(1, 3)
+
+def determine_action_plan_length(ticket_history):
+    prompt = (
+        f"Given the ticket history below, estimate a realistic number of actions required "
+        f"for the corrective action plan. Provide only the number of actions as an integer between 1 and 5.\n\n"
+        f"Ticket History:\n"
+        f"{'-'*20}\n"
+        f"{chr(10).join(ticket_history)}\n"
+        f"{'-'*20}\n"
+    )
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{
+            "role": "user",
+            "content": prompt,
+        }],
+        max_tokens=1,
+        temperature=0
+    )
+    num_actions_str = response.choices[0].message.content.strip()
+    try:
+        num_actions = int(num_actions_str)
+        if 1 <= num_actions <= 5:
+            return num_actions
+        else:
+            return random.randint(1, 5)
+    except ValueError:
+        return random.randint(1, 5)
 
 def generate_ticket_dates(num_tickets, start_date, end_date):
     total_days = (end_date - start_date).days + 1
@@ -172,49 +357,89 @@ def generate_ticket_dates(num_tickets, start_date, end_date):
         dates.append(date)
     return dates
 
-def generate_description(category_name, description_hint):
-    prompt = (
-        f"You are an expert in non-conformity management in the {category_name} domain. "
-        f"Please generate a detailed and realistic description for a non-conformity. "
-        f"Here is an example of a description: {description_hint}. "
-        f"Ensure that the description is relevant and realistic."
-    )
-    max_tokens = random.randint(30, 100)  # Variable length for description
-    response = client.chat.completions.create(
-        messages=[{
-            "role": "user",
-            "content": prompt,
-        }],
-        model="gpt-4o-mini",
-        max_tokens=max_tokens
-    )
-    return response.choices[0].message.content.strip()
-
 def generate_tickets(category_code, category_info, ticket_dates):
     tickets = []
+    category_name = category_info["category"]
+    labels = category_info["label"]
     for i, date_opened in enumerate(ticket_dates):
-        ticket_id = f"NC-{category_code}-{i+1:05d}"
-        description_hint = random.choice(category_info['label'])
-        description = generate_description(category_info['category'], description_hint)
+        ticket_id = f"{category_code}-{i+1:04d}"
+        description_hint = random.choice(labels)
+        description = generate_description(category_name, description_hint)
         status_history = []
+        previous_comments = []
+
         current_date = date_opened
-        category_name = category_info["category"]
-        statuses = category_info["ticket_status"]
-        for status in statuses:
-            comment = generate_comment(ticket_id, status, category_name)
-            status_entry = {
-                "Status": status,
-                "Date": current_date.strftime("%Y-%m-%d"),
-                "Comment": comment
-            }
-            status_history.append(status_entry)
-            if category_code == "LOG":
-                delta_days = random.randint(3, 7)  # Longer delays for software
-            elif category_code == "SEC":
-                delta_days = random.randint(1, 2)  # Shorter delays for safety
-            else:
+        action_plan_actions = []
+        first_technical_analysis = ""
+
+        for status_info in ticket_status_steps_prompts:
+            status = status_info["status"]
+            count = 1
+            if status_info["type"] == "optional":
+                if random.choice([True, False]):
+                    continue  # Skip optional steps randomly
+            if status_info["recurrence"] == "many":
+                complexity = determine_complexity(description, first_technical_analysis)
+                count = random.randint(1, complexity) if complexity > 1 else 1
+
+            for _ in range(count):
+                comment = generate_comment(ticket_id, status_info, category_name, description, previous_comments)
+                previous_comments.append(comment)
+                status_entry = {
+                    "Status": status_info["status"],
+                    "Date": current_date.strftime("%Y-%m-%d"),
+                    "Comment": comment
+                }
+                status_history.append(status_entry)
+                if status_info["status"] == "Technical Analysis" and not first_technical_analysis:
+                    first_technical_analysis = comment
+                # Adjust date progression
                 delta_days = random.randint(1, 5)
-            current_date += timedelta(days=delta_days)
+                current_date += timedelta(days=delta_days)
+
+            # Special handling for action plan steps
+            if status_info["status"] == "Correction Action Plan Definition":
+                num_actions = determine_action_plan_length(previous_comments)
+                action_plan_actions = [f"Action {j+1}" for j in range(num_actions)]
+            elif status_info["status"] == "Correction Action Plan Execution - per action":
+                for action in action_plan_actions:
+                    delta_days = random.randint(5, 15)
+                    current_date += timedelta(days=delta_days)
+                    action_comment = generate_comment(
+                        ticket_id,
+                        status_info,
+                        category_name,
+                        description,
+                        previous_comments + [f"Action: {action}"]
+                    )
+                    previous_comments.append(action_comment)
+                    status_entry = {
+                        "Status": f"{status_info['status']} - {action}",
+                        "Date": current_date.strftime("%Y-%m-%d"),
+                        "Comment": action_comment
+                    }
+                    status_history.append(status_entry)
+                continue
+            elif status_info["status"] == "Validation of corrective actions":
+                for action in action_plan_actions:
+                    delta_days = random.randint(1, 5)
+                    current_date += timedelta(days=delta_days)
+                    validation_comment = generate_comment(
+                        ticket_id,
+                        status_info,
+                        category_name,
+                        description,
+                        previous_comments + [f"Action: {action}"]
+                    )
+                    previous_comments.append(validation_comment)
+                    status_entry = {
+                        "Status": f"{status_info['status']} - {action}",
+                        "Date": current_date.strftime("%Y-%m-%d"),
+                        "Comment": validation_comment
+                    }
+                    status_history.append(status_entry)
+                continue
+
         ticket = {
             "Ticket ID": ticket_id,
             "Category": category_name,
@@ -223,8 +448,9 @@ def generate_tickets(category_code, category_info, ticket_dates):
             "Status History": status_history
         }
         tickets.append(ticket)
-        if (i + 1) % 10 == 0:
-            print(f"{i + 1}/{len(tickets)} tickets generated for category {category_info['category']}")
+        print(ticket)
+        if (i + 1) % 1 == 0:
+            print(f"{i + 1}/{len(ticket_dates)} tickets generated for category {category_info['category']}")
     return tickets
 
 def save_tickets_to_csv(tickets, filename):
@@ -237,7 +463,7 @@ def save_tickets_to_csv(tickets, filename):
                 writer.writerow({
                     'Ticket ID': ticket['Ticket ID'],
                     'Category': ticket['Category'],
-                    "Open Date": ticket["Open Date"],
+                    'Open Date': ticket['Open Date'],
                     'Initial Description': ticket['Initial Description'],
                     'Status': status['Status'],
                     'Status Date': status['Date'],
@@ -247,7 +473,7 @@ def save_tickets_to_csv(tickets, filename):
 def main():
     start_date = datetime(2020, 1, 1)
     end_date = datetime(2024, 10, 31)
-    total_tickets = 50  # total number of tickets to generate
+    total_tickets = 10  # Total number of tickets to generate
     all_tickets = []
     for category_code, category_info in categories.items():
         num_tickets = int(total_tickets * category_info["weight"])
