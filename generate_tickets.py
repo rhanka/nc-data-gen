@@ -137,7 +137,7 @@ ticket_status_steps_prompts = [
         "prompt": (
             "As the technician involved in the A220 aircraft manufacturing process who opened the ticket, "
             "provide a detailed and realistic description of the non-conformity. "
-            "Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician."
+            "Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician, using telegraphic-synthetic and minimalistic style with bullet points."
         )
     },
     {
@@ -146,7 +146,7 @@ ticket_status_steps_prompts = [
         "recurrence": "once",
         "prompt": (
             "As a technical analyst in the A220 aircraft manufacturing process, analyze the issue described. "
-            "Provide insights based on previous comments and the ticket description, using professional language appropriate for an engineer. "
+            "Provide insights based on previous comments and the ticket description, using professional language appropriate for an engineer, using telegraphic-synthetic and minimalistic style with bullet points."
             "Include possible causes, affected systems, and any immediate recommendations."
         )
     },
@@ -156,7 +156,7 @@ ticket_status_steps_prompts = [
         "recurrence": "many",
         "prompt": (
             "As an expert in the A220 aircraft manufacturing domain, offer specialized input on the issue. "
-            "Expand on the analysis and previous comments with advanced technical insights, maintaining a professional tone."
+            "Expand on the analysis and previous comments with advanced technical insights, maintaining a professional tone, using telegraphic-synthetic and minimalistic style with bullet points."
         )
     },
     {
@@ -165,20 +165,20 @@ ticket_status_steps_prompts = [
         "recurrence": "once",
         "prompt": (
             "As the technical manager overseeing the A220 aircraft manufacturing, validate the analysis provided. "
-            "Offer feedback or approval, addressing any concerns in a professional manner appropriate for management."
+            "Offer feedback or approval, addressing any concerns in a professional manner appropriate for management, using telegraphic-synthetic and minimalistic style with bullet points."
         )
     },
     {
         "status": "Calculation Analysis",
         "type": "mandatory",
         "recurrence": "once",
-        "prompt": "As a calculation engineer specialist, perform calculation analysis related to the issue and document your findings."
+        "prompt": "As a calculation engineer specialist, perform calculation analysis related to the issue and document your findings, using telegraphic-synthetic and minimalistic style with bullet points."
     },
     {
         "status": "Calculation Analysis - expertise",
         "type": "optional",
         "recurrence": "many",
-        "prompt": "As a calculation engineer expert in the domain, contribute specialized calculations or validations as needed."
+        "prompt": "As a calculation engineer expert in the domain, contribute specialized calculations or validations as needed, using telegraphic-synthetic and minimalistic style with bullet points."
     },
     {
         "status": "Calculation Analysis - validation",
@@ -234,7 +234,7 @@ ticket_status_steps_prompts = [
         "recurrence": "once",
         "prompt": (
             "As the final reviewer, confirm that all steps have been completed satisfactorily and close the ticket. "
-            "Provide a summary of the resolution, ensuring all documentation is complete, and maintain a professional tone."
+            "Provide a summary of the resolution, ensuring all documentation is complete, and maintain a professional tone, using telegraphic-synthetic and minimalistic style with bullet points."
         )
     }
 ]
@@ -244,7 +244,7 @@ def generate_comment(ticket_id, status_info, category_name, description, previou
     prompt_injection = status_info["prompt"]
 
     # Decide on a word limit for the comment
-    word_limit = random.randint(50, 500)
+    word_limit = random.randint(20, 100)
 
     # Generate a comment using OpenAI API based on the description and previous comments
     full_prompt = (
@@ -257,7 +257,7 @@ def generate_comment(ticket_id, status_info, category_name, description, previou
         f"{'-'*20}\n"
         f"{chr(10).join(previous_comments)}\n"
         f"{'-'*20}\n"
-        f"Please write your comment, using professional and technical language appropriate for your role. "
+        f"Please write your comment, using professional and technical language appropriate for your role, telegraphic-synthetic and minimalistic style with bullet points. "
         f"Ensure the response is realistic and aligns with the context provided. "
         f"Limit your response to approximately {word_limit} words."
     )
@@ -273,13 +273,13 @@ def generate_comment(ticket_id, status_info, category_name, description, previou
 
 def generate_description(category_name, description_hint):
     # Decide on a word limit for the description
-    word_limit = random.randint(50, 150)
+    word_limit = random.randint(20, 100)
 
     # Generate a description using OpenAI API based on the category and hint
     prompt = (
         f"You are a technician working on the A220 aircraft manufacturing process in the {category_name} domain.\n"
         f"Based on the hint '{description_hint}', provide a detailed and realistic description of a non-conformity event. "
-        f"Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician.\n"
+        f"Include specific observations, measurements, or issues noted, using professional and technical language appropriate for a technician, telegraphic-synthetic and minimalistic style with bullet points.\n"
         f"Please limit your response to approximately {word_limit} words."
     )
 
